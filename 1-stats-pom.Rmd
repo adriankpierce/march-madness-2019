@@ -1,0 +1,66 @@
+---
+title: "Stats - Median POM Ranking"
+---
+
+Load libraries
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+```
+
+Read in the data
+```{r}
+massey <- read.csv("data/MasseyOrdinals_thru_2019_day_128.csv", stringsAsFactors = FALSE)
+#preview
+head(massey)
+tail(massey)
+```
+
+Filter for only POM rankings
+```{r}
+pom <- massey %>% filter(SystemName=="POM")
+head(pom)
+```
+
+Calculate median POM
+```{r}
+#find all unique values by BOTH Season and TeamID
+#this will be the skeleton of the final database we want
+pomUnique <- distinct(pom, Season, TeamID, .keep_all = TRUE)
+
+#loop through all the unique values
+for (i in 1:NROW(pomUnique)){
+    
+    #we want to replace the per game data in each row of the unique data frame with median POM for that team in that season
+    #first filter the FULL season results by two variables, the current row SEASON and TEAM ID
+    #then only select the rows where median POM can be computed
+    #compute the median POM of the filtered and selected columns and insert into the respective row of the unique data frame
+    pomUnique[i,5] <- sapply((pom %>%
+      filter(Season == pomUnique[i,1], TeamID == pomUnique[i,4]) %>%
+      dplyr::select(OrdinalRank)), median)
+}
+```
+
+Preview output
+```{r}
+head(pomUnique)
+```
+
+Select final data and rename variables
+```{r}
+pomUnique <- pomUnique[,c(1,4,5)]
+names(pomUnique)[3] <- "medianPOM"
+head(pomUnique)
+```
+
+Output to file
+```{r}
+write.csv(pomUnique, "output/stats-pom.csv", row.names = FALSE)
+```
+
+
+
+
+
+
+
+

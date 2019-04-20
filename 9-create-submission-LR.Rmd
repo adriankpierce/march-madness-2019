@@ -1,0 +1,86 @@
+---
+title: "Create final submissions (LR)"
+---
+
+Load libraries
+```{r, warning=FALSE, message=FALSE}
+library(raster)
+library(tidyverse)
+```
+
+Read in data
+```{r}
+submissionA <- read.csv("output/2019FinalSubmissionOutput.csv", stringsAsFactors = FALSE)
+#submissionB <- read.csv("output/2019FinalSubmissionOutput.csv", stringsAsFactors = FALSE)
+LR <- read.csv("output/unique-teams-LR.csv", stringsAsFactors = FALSE)
+head(submissionA)
+head(submissionB)
+head(LR)
+```
+
+Split string in submission file
+```{r}
+#Create blank rows
+submissionA$Season <- NA
+submissionA$team1_id <- NA
+submissionA$team2_id <- NA
+
+#split the ID column into the 3 blank rows created above
+for (i in 1:nrow(submissionA)){
+  submissionA[i,c(3:5)] <- as.integer(str_split_fixed(submissionA[i,1], "_", 3))
+}
+
+#preview
+head(submissionA)
+```
+
+Merge in LR info
+```{r}
+submissionA <- left_join(submissionA,LR, by = c("team1_id" = "team1_id"))
+submissionA <- left_join(submissionA,LR, by = c("team2_id" = "team1_id"))
+
+head(submissionA)
+```
+
+Select relevant columns and rename
+```{r}
+submissionA <- submissionA[,c(1:5,7,9)]
+names(submissionA)[6] <- "team1_side"
+names(submissionA)[7] <- "team2_side"
+head(submissionA)
+```
+
+If team 1 and team 2 are on the same side, keep prediction, otherwise, replace with a 1 or 0
+```{r}
+submissionB <- submissionA %>% mutate(B = ifelse(team1_side == team2_side,Pred,ifelse(team1_side!=team2_side,0,NA)))
+submissionA <- submissionA %>% mutate(A = ifelse(team1_side == team2_side,Pred,ifelse(team1_side!=team2_side,1,NA)))
+head(submissionA)
+head(submissionB)
+```
+
+Reformat to match submission template 
+```{r}
+submissionA <- submissionA %>% dplyr::select(ID, A)
+names(submissionA)[2] <- "Pred"
+head(submissionA)
+
+submissionB <- submissionB %>% dplyr::select(ID, B)
+names(submissionB)[2] <- "Pred"
+head(submissionB)
+```
+
+Output to file
+```{r}
+write.csv(submissionA, file = "2019FinalSubmissionOutputA.csv", row.names = FALSE)
+write.csv(submissionB, file = "2019FinalSubmissionOutputB.csv", row.names = FALSE)
+```
+
+
+
+
+
+
+
+
+
+

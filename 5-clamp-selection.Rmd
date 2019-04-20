@@ -1,0 +1,140 @@
+---
+title: "Clamp selection"
+---
+
+Load libraries
+```{r, warning=FALSE, message=FALSE}
+library(raster)
+library(tidyverse)
+```
+
+Read in data
+```{r}
+training_data <- read.csv("output/training-data.csv", stringsAsFactors = FALSE)
+head(training_data)
+```
+
+Reformat columns
+```{r}
+training_data$Season <- as.numeric(training_data$Season)
+```
+
+Load library
+```{r}
+library(SciViews)
+```
+
+Final model selected was: (X3, - X4), (X5, - X6), (X7 - X8), (X13 - X14). Therefore, 
+Calculate required variables
+```{r}
+#training_data <- training_data %>% mutate(POMdiff = (team1_medianPOM - team2_medianPOM))
+training_data <- training_data %>% mutate(team1_medianPOMajd = 100-4*ln(team1_medianPOM+1)-team1_medianPOM/22)
+training_data <- training_data %>% mutate(team2_medianPOMajd = 100-4*ln(team2_medianPOM+1)-team2_medianPOM/22)
+training_data <- training_data %>% mutate(POMadjDiff = team1_medianPOMajd - team2_medianPOMajd)
+training_data <- training_data %>% mutate(netRTGdiff = (team1_netRTG - team2_netRTG))
+training_data <- training_data %>% mutate(offRTGdiff = (team1_offRTG - team2_offRTG))
+training_data <- training_data %>% mutate(defRTGdiff = (team1_defRTG - team2_defRTG))
+#training_data <- training_data %>% mutate(possdiff = (team1_possessionTimeGameM - team2_possessionTimeGameM))
+# training_data <- training_data %>% mutate(team1_pom2 = team1_medianPOM^2)
+# training_data <- training_data %>% mutate(team2_pom2 = team2_medianPOM^2)
+# training_data <- training_data %>% mutate(team1_offRTG2 = team1_offRTG^2)
+# training_data <- training_data %>% mutate(team2_offRTG2 = team2_offRTG^2)
+# training_data <- training_data %>% mutate(team1_defRTG2 = team1_defRTG^2)
+# training_data <- training_data %>% mutate(team2_defRTG2 = team2_defRTG^2)
+# training_data <- training_data %>% mutate(team1_netRTG2 = team1_netRTG^2)
+# training_data <- training_data %>% mutate(team2_netRTG2 = team2_netRTG^2)
+head(training_data)
+```
+
+Train and test up to current year (useful, but was not used moving forward)
+```{r}
+year <- 2018
+year <- year-1
+```
+
+Select relevant columns (not needed, see NOTE in "4-model-selection.RMD")
+```{r}
+#training_data <- training_data %>% dplyr::select(-c(team1_possessionTimeGameM,team2_possessionTimeGameM))
+```
+
+Determine optimal clamp value
+```{r, warning=FALSE, message=FALSE}
+#create empty dataframe to store the loop's output
+output=c()
+#create empty list to store error for each clamp value tested
+clampScores <- vector(mode = "list", length = 100)
+#create empty list to store error for each simulated competition year
+errorStorage <- vector(mode = "list", length = 16)
+
+#setup counter
+counter = 0
+
+#loop through all clamp values we want to test (0 to 10%)
+for(i in seq(0, 0.1, by = 0.001)){
+  
+  counter = counter + 1
+  
+  for(year in 2003:2018){
+    
+    #select appropriate training data: (all data up until year - 1) + (season data for year)
+    a <- training_data %>% filter(Season %in% c(2003:year))
+    b <- training_data %>% filter(Season==year & post==0)
+   
+    #merge training data
+    training <- bind_rows(a,b)
+    
+    #select appropriate testing data: (tourney data for year)
+    testing <- training_data %>% filter(Season==year & post==1)
+      
+    #remove temporary variables                        
+    rm(a,b)
+    
+    #select appropriate columns
+    training <- training[,c(5:dim(training)[2])]
+    testing <- testing[,c(5:dim(testing)[2])]
+
+    #create logistic regression
+    LogisticReg <- glm(result ~ .    -team1_offRTG -team2_offRTG -team1_defRTG -team2_defRTG -team1_netRTG -team2_netRTG -team2_tempo -team1_tempo, data = training, family = binomial(logit))
+    
+    #predict
+    predictions <-predict(LogisticReg, testing, type = "response")
+    
+    #clamp
+    predictions <- clamp(predictions, lower=(0+i), upper=(1-i), useValues=TRUE)
+    
+    #round predictions for misclassification
+    roundedPredictions <- round(predictions)
+    
+    #calculate misclassification
+    sizeTest <- dim(testing)[1]
+    error = sum(roundedPredictions != testing$result)
+    misclassification = error / sizeTest
+    
+    #calculate logloss evaluation
+    library(MLmetrics)
+    logloss <- LogLoss(y_pred = predictions, y_true = testing$result)
+    
+    #store logloss for current year being tested
+    errorStorage[year] <- logloss
+  }
+  
+  #store competition performance average over all years tested
+  clampScores[counter] <- mean(unlist(errorStorage))
+  
+  #bind to output array
+  output <- cbind(output, c(i, clampScores[counter]))
+}
+```
+
+Output to results to file and view details
+```{r}
+output <- output[-c(3),]
+write.csv(output, file = "output/clamp-selection.csv", row.names = FALSE, col.names = FALSE)
+
+#view logistic regression details
+summary(LogisticReg)
+print(predictions)
+```
+
+
+

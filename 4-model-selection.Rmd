@@ -1,0 +1,133 @@
+---
+title: "Model Selection"
+---
+
+Load in libraries
+```{r, warning=FALSE, message=FALSE}
+library(raster)
+library(tidyverse)
+```
+
+Read in data
+NOTE: possession columns were excluded from training data (see "3-create-training-data.RMD")
+```{r}
+training_data <- read.csv("output/training-data.csv", stringsAsFactors = FALSE)
+head(training_data)
+```
+
+Manipulate factorized column
+```{r}
+training_data$Season <- as.numeric(training_data$Season)
+```
+
+Load in library
+```{r}
+library(SciViews)
+```
+
+Various manipulations of variables used in the model selection process. Uncomment as needed.
+```{r}
+#training_data <- training_data %>% mutate(POMdiff = (team1_medianPOM - team2_medianPOM))
+training_data <- training_data %>% mutate(team1_medianPOMajd = 100-4*ln(team1_medianPOM+1)-team1_medianPOM/22)
+training_data <- training_data %>% mutate(team2_medianPOMajd = 100-4*ln(team2_medianPOM+1)-team2_medianPOM/22)
+training_data <- training_data %>% mutate(POMadjDiff = team1_medianPOMajd - team2_medianPOMajd)
+training_data <- training_data %>% mutate(netRTGdiff = (team1_netRTG - team2_netRTG))
+training_data <- training_data %>% mutate(offRTGdiff = (team1_offRTG - team2_offRTG))
+training_data <- training_data %>% mutate(defRTGdiff = (team1_defRTG - team2_defRTG))
+#training_data <- training_data %>% mutate(possdiff = (team1_possessionTimeGameM - team2_possessionTimeGameM))
+# training_data <- training_data %>% mutate(team1_pom2 = team1_medianPOM^2)
+# training_data <- training_data %>% mutate(team2_pom2 = team2_medianPOM^2)
+# training_data <- training_data %>% mutate(team1_offRTG2 = team1_offRTG^2)
+# training_data <- training_data %>% mutate(team2_offRTG2 = team2_offRTG^2)
+# training_data <- training_data %>% mutate(team1_defRTG2 = team1_defRTG^2)
+# training_data <- training_data %>% mutate(team2_defRTG2 = team2_defRTG^2)
+# training_data <- training_data %>% mutate(team1_netRTG2 = team1_netRTG^2)
+# training_data <- training_data %>% mutate(team2_netRTG2 = team2_netRTG^2)
+head(training_data)
+```
+
+Train and test up to current year (useful, but was not used moving forward)
+```{r}
+year <- 2018
+year <- year-1
+```
+
+Select relevant columns (not needed, see above NOTE)
+```{r}
+#training_data <- training_data %>% dplyr::select(-c(team1_PossessionTimePerGame.M,team2_PossessionTimePerGame.M))
+```
+
+Create logistic regression model and simulate historical competition performance
+
+Bank of variables (copy paste as needed):
+-team2_tempo -team1_tempo -team1_offRTG -team2_offRTG -team1_defRTG -team2_defRTG -team1_netRTG -team2_netRTG -team1_netRTG -team2_netRTG -team1_medianPOM -team2_medianPOM -team2_possessionTimeGameM -team1_possessionTimeGameM
+
+```{r}
+#create blank variable to store outputs
+output=c()
+
+#begin loop of simulating competition results
+for (year in 2003:2018){
+
+  #select appropriate training data: (all data up until year - 1) + (season data for year)
+  a <- training_data %>% filter(Season %in% c(2003:year))
+  b <- training_data %>% filter(Season==year & post==0)
+  
+  #merge training data
+  training <- bind_rows(a,b)
+  
+  #select appropriate testing data: (tourney data for year)
+  testing <- training_data %>% filter(Season==year & post==1)
+  
+  #remove temporary variables               
+  rm(a,b)
+  
+  #select appropriate columns
+  training <- training[,c(5:dim(training)[2])]
+  testing <- testing[,c(5:dim(testing)[2])]
+
+  #create logistic regression
+  LogisticReg <- glm(result ~ . -team1_medianPOMajd -team2_medianPOMajd -team1_medianPOM -team2_medianPOM  -team1_offRTG -team2_offRTG -team1_defRTG -team2_defRTG -team1_netRTG -team2_netRTG -team2_tempo -team1_tempo, data = training, family = binomial(logit))
+  
+  #predict
+  predictions <-predict(LogisticReg, testing, type = "response")
+  
+  #clamp
+  predictions <- clamp(predictions, lower=0.029, upper=0.971, useValues=TRUE)
+  
+  #round predictions for misclassification
+  roundedPredictions <- round(predictions)
+  
+  #calculate misclassification
+  sizeTest <- dim(testing)[1]
+  error = sum(roundedPredictions != testing$result)
+  misclassification = error / sizeTest
+  
+  #calculate logloss evaluation
+  library(MLmetrics)
+  logloss <- LogLoss(y_pred = predictions, y_true = testing$result)
+  
+  #print outputs
+  print("Year, n, Logloss, Misclassification:")
+  print(year)
+  print(dim(training[1]))
+  print(logloss)
+  print(misclassification)
+  
+  #bind results of current loop to output table
+  output <- cbind(output, c(year,dim(training[1]), logloss, misclassification))
+}
+```
+
+Output to results to file and view details
+```{r}
+output <- output[-c(3),]
+write.csv(output, file = "output/model-selection.csv", row.names = FALSE, col.names = FALSE)
+
+#view logistic regression details
+summary(LogisticReg)
+print(predictions)
+```
+
+
+

@@ -1,0 +1,64 @@
+---
+title: "Predictions Named"
+---
+
+Load libraries
+```{r, warning=FALSE, message=FALSE}
+library(raster)
+library(tidyverse)
+```
+
+Read in data
+```{r}
+submission <- read.csv("2019FinalSubmissionOutput.csv", stringsAsFactors = FALSE)
+teams <- read.csv("data/Teams.csv")
+head(submission)
+head(teams)
+```
+
+Split string in submission file
+```{r}
+#Create blank rows
+submission$Season <- NA
+submission$team1_id <- NA
+submission$team2_id <- NA
+
+#split the ID column into the 3 blank rows created above
+for (i in 1:nrow(submission)){
+  submission[i,c(3:5)] <- as.integer(str_split_fixed(submission[i,1], "_", 3))
+}
+
+#preview
+head(submission)
+```
+
+Merge in team names
+```{r}
+submission <- left_join(submission,teams, by = c("team1_id" = "TeamID"))
+submission <- left_join(submission,teams, by = c("team2_id" = "TeamID"))
+#preview
+head(submission)
+```
+
+Select relevant columns and rename
+```{r}
+submission <- submission[,c(6,8,2)]
+names(submission)[1] <- "Team1"
+names(submission)[2] <- "Team2"
+head(submission)
+```
+
+Output to file
+```{r}
+write.csv(submission, file = "output/predictions-named.csv", row.names = FALSE)
+```
+
+
+
+
+
+
+
+
+
+

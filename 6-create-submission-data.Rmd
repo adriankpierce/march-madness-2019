@@ -1,0 +1,71 @@
+---
+title: "Submission Merge"
+---
+
+Load libraries
+```{r}
+library(stringr)
+library(dplyr)
+```
+
+Load data files
+```{r}
+training_data <- read.csv("output/training-data.csv", header = TRUE)
+submission <- read.csv("data/SampleSubmissionStage2.csv", header = TRUE)
+head(training_data)
+head(submission)
+```
+
+Wrangle the submission template file
+```{r}
+#Create blank columns
+submission$Season <- NA
+submission$team1_id <- NA
+submission$team2_id <- NA
+
+#split the ID column into the 3 blank rows created above
+for (i in 1:nrow(submission)){
+  submission[i,c(3:5)] <- as.integer(str_split_fixed(submission[i,1], "_", 3))
+}
+
+#preview data
+head(submission)
+```
+
+Create a vector of columns for each set of team data
+```{r}
+dataTeam1 <- training_data
+dataTeam2 <- training_data
+team1vector <- c(1,2,6:10)
+team2vector <- c(1,3,11:15)
+
+#preview data
+head(submission)
+```
+
+Merge both team 1 and team 2 data into the submission file skeleton
+```{r}
+#keep unique values only
+dataTeam1 <- distinct(dataTeam1, Season, team1_id, .keep_all = TRUE)
+dataTeam2 <- distinct(dataTeam2, Season, team2_id, .keep_all = TRUE)
+
+#preview data
+head(dataTeam2)
+head(dataTeam1)
+
+#merge
+submission <- left_join(submission,dataTeam1[,team1vector], by = c("team1_id" = "team1_id", "Season" = "Season"))
+submission <- left_join(submission,dataTeam2[,team2vector], by = c("team2_id" = "team2_id", "Season" = "Season"))
+
+#preview
+head(submission)
+```
+
+Output to file
+```{r}
+#write
+write.csv(submission, file = "output/submission-merge.csv", row.names = FALSE)
+```
+
+
+

@@ -1,0 +1,82 @@
+---
+title: "Stats - Standard Deviation of Team Season Averages"
+---
+
+Load Libraries
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+```
+
+Read in the data
+```{r}
+reg_season_stats <- read.csv("data/RegularSeasonDetailedResults.csv", stringsAsFactors = FALSE)
+tourney_stats <- read.csv("data/NCAATourneyDetailedResults.csv", stringsAsFactors = FALSE)
+head(reg_season_stats)
+```
+
+Combine regular season and tournament
+```{r}
+combined_stats <- bind_rows(reg_season_stats, tourney_stats)
+```
+
+Combine winning teams and losing teams stats
+```{r}
+#duplicate data
+combined_statsCompiled <- combined_stats
+
+#change the column names so that they are identical for merging
+names(combined_statsCompiled) <- gsub(x = names(combined_statsCompiled), pattern = "WTeam", replacement = "Team")
+names(combined_statsCompiled) <- gsub(x = names(combined_statsCompiled), pattern = "LTeam", replacement = "Team")
+names(combined_statsCompiled) <- gsub(x = names(combined_statsCompiled), pattern = "W", replacement = "")
+names(combined_statsCompiled) <- gsub(x = names(combined_statsCompiled), pattern = "L", replacement = "")
+
+#combine WTeam and LTeam stats
+combined_statsCompiled <- bind_rows(combined_statsCompiled[,c(1,3:4,9:21)],combined_statsCompiled[,c(1,5:6,22:34)])
+head(combined_statsCompiled)
+```
+
+Calculate SD
+```{r}
+#find all unique values by BOTH Season and TeamID
+#this will be the skeleton of the final database we want
+combined_statsCompiledUnique <- distinct(combined_statsCompiled,Season, TeamID, .keep_all = TRUE)
+
+#loop through all the unique values
+for (i in 1:NROW(combined_statsCompiledUnique)){
+    
+    #we want to replace the per game data in each row of the unique data frame with SD for that team in that season
+    #first filter the FULL season results by two variables, the current row SEASON and TEAM ID
+    #then only select the rows where an average can be computed
+    #compute the SD  and insert into the respective row of the unique data frame
+    combined_statsCompiledUnique[i,c(3:16)] <- colMeans(combined_statsCompiled %>%
+      filter(Season == combined_statsCompiledUnique[i,1], TeamID == combined_statsCompiledUnique[i,2]) %>%
+      dplyr::select(-(Season:TeamID)))
+}
+```
+
+Calculate Z-score
+```{r}
+#find number of columns
+col <- dim(combined_statsCompiledUnique)[2]
+
+#duplicate data
+normData <- combined_statsCompiledUnique
+
+#for all desired columns, compute the Z-score
+for(i in 3:col){
+  normData[,i] = (normData[,i] - mean(normData[,i]))/sd(normData[,i])
+}
+```
+
+Rename variables
+```{r}
+names(normData)[3:16] <- paste(sep = "_", "Z", names(combined_statsCompiledUnique)[3:16])
+head(normData)
+```
+
+Output to file
+```{r}
+write.csv(normData, file="output/stats-sd.csv", row.names = FALSE)
+```
+
+

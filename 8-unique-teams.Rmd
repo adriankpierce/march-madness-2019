@@ -1,0 +1,69 @@
+---
+title: "Unique Teams (Named)"
+
+---
+
+Load libraries
+```{r, warning=FALSE, message=FALSE}
+library(raster)
+library(tidyverse)
+```
+
+Read in data
+```{r}
+LRsubmission <- read.csv("data/SampleSubmissionStage2.csv", stringsAsFactors = FALSE)
+head(LRsubmission)
+```
+
+Prepare sample submission skeleton
+```{r}
+#Create blank rows
+LRsubmission$Season <- NA
+LRsubmission$team1_id <- NA
+LRsubmission$team2_id <- NA
+
+#split the ID column into the 3 blank rows created above
+for (i in 1:nrow(LRsubmission)){
+  LRsubmission[i,c(3:5)] <- as.integer(str_split_fixed(LRsubmission[i,1], "_", 3))
+}
+
+#preview
+head(LRsubmission)
+```
+
+Compute unqiue teams in March Madness tournament
+```{r}
+uniqueTeams <- distinct(LRsubmission, team2_id)
+head(uniqueTeams)
+```
+
+Read in team name data
+```{r}
+teams <- read.csv("data/Teams.csv")
+head(teams)
+```
+
+Merge in team names
+```{r}
+#manipulate column
+teams$TeamName <- as.character(teams$TeamName)
+#merge
+uniqueTeams <- left_join(uniqueTeams,teams, by = c("team2_id" = "TeamID"))
+#select relevant rows
+uniqueTeams <- uniqueTeams[,c(1:2)]
+#preview
+head(uniqueTeams)
+```
+
+Output to file
+```{r}
+write.csv(uniqueTeams, file = "output/unique-teams.csv", row.names = FALSE)
+```
+
+
+
+
+
+
+
+

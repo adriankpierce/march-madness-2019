@@ -1,0 +1,116 @@
+---
+title: "create Final Model"
+---
+
+Load libraries
+```{r, warning=FALSE, message=FALSE}
+library(raster)
+library(tidyverse)
+```
+
+Read in data
+```{r}
+training_data <- read.csv("training-data.csv", stringsAsFactors = FALSE)
+submission_data <- read.csv("submission-data.csv", stringsAsFactors = FALSE)
+#preview data
+head(training_data)
+head(submission_data)
+tail(training_data)
+```
+
+Reformat columns
+```{r}
+training_data$Season <- as.numeric(training_data$Season)
+submission_data$Season <- as.numeric(submission_data$Season)
+```
+
+
+Load library
+```{r}
+library(SciViews)
+```
+
+Final model selected was: (X3, - X4), (X5, - X6), (X7 - X8 ), (X13 - X14). Therefore, 
+Calculate required variables
+```{r}
+#mutate training data
+training_data <- training_data %>% mutate(team1_medianPOMajd = 100-4*ln(team1_medianPOM+1)-team1_medianPOM/22)
+training_data <- training_data %>% mutate(team2_medianPOMajd = 100-4*ln(team2_medianPOM+1)-team2_medianPOM/22)
+training_data <- training_data %>% mutate(POMadjDiff = team1_medianPOMajd - team2_medianPOMajd)
+training_data <- training_data %>% mutate(netRTGdiff = (team1_netRTG - team2_netRTG))
+training_data <- training_data %>% mutate(offRTGdiff = (team1_offRTG - team2_offRTG))
+training_data <- training_data %>% mutate(defRTGdiff = (team1_defRTG - team2_defRTG))
+
+#mutate submission data
+submission_data <- submission_data %>% mutate(team1_medianPOMajd = 100-4*ln(team1_medianPOM+1)-team1_medianPOM/22)
+submission_data <- submission_data %>% mutate(team2_medianPOMajd = 100-4*ln(team2_medianPOM+1)-team2_medianPOM/22)
+submission_data <- submission_data %>% mutate(POMadjDiff = team1_medianPOMajd - team2_medianPOMajd)
+submission_data <- submission_data %>% mutate(netRTGdiff = (team1_netRTG - team2_netRTG))
+submission_data <- submission_data %>% mutate(offRTGdiff = (team1_offRTG - team2_offRTG))
+submission_data <- submission_data %>% mutate(defRTGdiff = (team1_defRTG - team2_defRTG))
+
+#preview
+head(training_data)
+head(submission_data)
+```
+
+Prepare training and submission data (make identical)
+```{r}
+#select relevant columns only
+training_data <- training_data %>% dplyr::select(-c(post))
+submission_data <- submission_data %>% dplyr::select(-c(ID))
+#preview
+head(training_data)
+head(submission_data)
+
+#rename columns
+names(submission_data)[1] <- "result"
+#preview
+head(training_data)
+head(submission_data)
+
+#select relevant columns only
+submission_data <- submission_data[,c(2:4,1,5:20)]
+#preview
+head(training_data)
+head(submission_data)
+```
+
+Create final logistic regression model
+```{r}
+training <- training_data
+testing <- submission_data
+                          
+#select relevant columns only
+training <- training[,c(4:dim(training)[2])]
+testing <- testing[,c(4:dim(testing)[2])]
+
+
+#create logistic regression
+LogisticReg <- glm(result ~ . -team1_medianPOMajd -team2_medianPOMajd -team1_medianPOM -team2_medianPOM  -team1_offRTG -team2_offRTG -team1_defRTG -team2_defRTG -team1_netRTG -team2_netRTG -team2_tempo -team1_tempo, data = training, family = binomial(logit))
+
+#predict
+predictions <-predict(LogisticReg, testing, type = "response")
+
+#clamp
+predictions <- clamp(predictions, lower=0.029, upper=0.971, useValues=TRUE)
+```
+
+Write predictions to submission template and output to file
+```{r}
+#Read in the submission template
+submissionTemplate <- read.csv("data/SampleSubmissionStage2.csv", header = TRUE)
+
+#write in the predictions to the submission template
+submissionTemplate$Pred <- predictions
+
+#preview the data
+head(submissionTemplate)
+
+#write the output
+write.csv(submissionTemplate, file = "2019FinalSubmissionOutput.csv", row.names = FALSE)
+```
+
+
+
+

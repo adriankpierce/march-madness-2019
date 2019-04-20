@@ -1,0 +1,130 @@
+---
+title: "Exploratory Data Analysis"
+---
+
+Load libraries
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+```
+
+###Create skeleton for EDA
+
+Read in the data
+```{r}
+reg_season_stats <- read.csv("data/RegularSeasonDetailedResults.csv", stringsAsFactors = FALSE)
+tourney_stats <- read.csv("data/NCAATourneyDetailedResults.csv", stringsAsFactors = FALSE)
+head(reg_season_stats)
+```
+
+Combine regular season and tournament
+```{r}
+#distinguish between season and tournament games
+reg_season_stats$post <- 0
+tourney_stats$post <- 1
+#combine
+combined_stats <- bind_rows(reg_season_stats, tourney_stats)
+head(combined_stats)
+```
+
+Combine winning teams and losing teams stats
+```{r}
+#duplicate data
+combined_statsCompiled <- combined_stats
+
+#change the column names so that they are identical for merging
+names(combined_statsCompiled) <- gsub(x = names(combined_statsCompiled), pattern = "WTeam", replacement = "Team")
+names(combined_statsCompiled) <- gsub(x = names(combined_statsCompiled), pattern = "LTeam", replacement = "Team")
+names(combined_statsCompiled) <- gsub(x = names(combined_statsCompiled), pattern = "W", replacement = "")
+names(combined_statsCompiled) <- gsub(x = names(combined_statsCompiled), pattern = "L", replacement = "")
+
+#combine WTeam and LTeam stats
+combined_statsCompiled <- bind_rows(combined_statsCompiled[,c(1,3:4,9:21,35)],combined_statsCompiled[,c(1,5:6,22:34,35)])
+head(combined_statsCompiled)
+```
+
+Create skeleton
+```{r}
+#find all unique values by BOTH Season and TeamID
+combined_statsCompiledUnique <- distinct(combined_statsCompiled,Season, TeamID, .keep_all = TRUE)
+#keep only relevant rows
+combined_statsCompiledUnique <- combined_statsCompiledUnique %>% select(Season, TeamID, post)
+#preview data
+head(combined_statsCompiledUnique)
+```
+
+Calculate if a team played in march madness per season
+```{r}
+for (i in 1:NROW(combined_statsCompiledUnique)){
+    combined_statsCompiledUnique[i,c(3)] <- max(combined_statsCompiled %>%
+      filter(Season == combined_statsCompiledUnique[i,1], TeamID == combined_statsCompiledUnique[i,2]) %>%
+      dplyr::select(c(post)))
+}
+```
+
+Rename columns
+```{r}
+names(combined_statsCompiledUnique)[3] <- "playedInPost"
+head(combined_statsCompiledUnique)
+```
+
+Change factor levels
+```{r}
+combined_statsCompiledUnique$playedInPost[combined_statsCompiledUnique$playedInPost==1] <- "Y"
+combined_statsCompiledUnique$playedInPost[combined_statsCompiledUnique$playedInPost==0] <- "N"
+head(combined_statsCompiledUnique)
+combined_statsCompiledUnique$playedInPost <- as.factor(combined_statsCompiledUnique$playedInPost)
+```
+
+### EDA
+
+Read in the data
+```{r}
+seasonTeamsUnique <- combined_statsCompiledUnique
+pom <- read.csv("output/stats-pom.csv", stringsAsFactors = FALSE)
+netRTG <- read.csv("output/stats-rating.csv", stringsAsFactors = FALSE)
+tempo <- read.csv("output/stats-tempo.csv", stringsAsFactors = FALSE)
+averages <- read.csv("output/stats-averages.csv", stringsAsFactors = FALSE)
+z <- read.csv("output/stats-sd.csv", stringsAsFactors = FALSE)
+
+head(seasonTeamsUnique)
+head(pom)
+head(netRTG)
+head(tempo)
+head(averages)
+head(z)
+```
+
+Merging all features to one dataset
+```{r}
+#duplicate data
+eda <- seasonTeamsUnique
+
+# Left outer joins
+eda <- merge(x = eda, y = pom, by = c("Season", "TeamID"), all.x = TRUE)
+eda <- merge(x = eda, y = netRTG, by = c("Season", "TeamID"), all.x = TRUE)
+eda <- merge(x = eda, y = tempo, by = c("Season", "TeamID"), all.x = TRUE)
+eda <- merge(x = eda, y = averages, by = c("Season", "TeamID"), all.x = TRUE)
+eda <- merge(x = eda, y = z, by = c("Season", "TeamID"), all.x = TRUE)
+
+#preview data
+head(eda)
+```
+
+Create density plots for all variables
+```{r}
+library(ggplot2)
+theme_set(theme_classic())
+
+#i <- 4
+
+for (i in 4:dim(eda)[2]){
+  offGraph <- ggplot(eda, aes(eda[,i]))
+  offGraph <- offGraph + geom_density(aes(fill=factor(playedInPost)), alpha=0.8) +
+    labs(title=paste(colnames(eda[i])),
+         subtitle="",
+         caption="",
+         x=paste(colnames(eda[i])),
+         fill="Played in tourney?")
+  print(offGraph)
+}
+```

@@ -1,0 +1,197 @@
+---
+title: "Create Training Data"
+---
+
+Load libraries
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+```
+
+### Create training skeleton
+
+Read in the data
+```{r}
+reg_season_stats <- read.csv("data/Prelim2019_RegularSeasonDetailedResults.csv", stringsAsFactors = FALSE)
+tourney_stats <- read.csv("data/NCAATourneyDetailedResults.csv", stringsAsFactors = FALSE)
+#preview data
+head(reg_season_stats)
+tail(reg_season_stats)
+head(tourney_stats)
+tail(tourney_stats)
+```
+
+Combine regular season and tournament
+```{r}
+#distinguish between season and tournament games
+reg_season_stats$post <- 0
+tourney_stats$post <- 1
+#combine
+combined_stats <- bind_rows(reg_season_stats, tourney_stats)
+```
+
+Preview the data (tail to ensure that 2019 data merged properly)
+```{r}
+head(reg_season_stats)
+head(tourney_stats)
+head(combined_stats)
+tail(combined_stats)
+```
+
+Create training data skeleton (assign result variable, flip 50% of the data)
+```{r}
+#Keep season and team columns
+training_data <- combined_stats[,c(1,3,5,35)]
+#Create result variables
+training_data$result <- 1
+#rename columns
+names(training_data) <- c("Season", "team1_id", "team2_id", "post" ,"result")
+
+
+#Randomly select 50% of the data
+num_samples = dim(training_data)[1]
+sampling.rate = 0.5
+trainingRows1 <- sample(1:num_samples, sampling.rate * num_samples, replace=FALSE)
+training1 <- training_data[trainingRows1, ]
+trainingRows2 <- setdiff(1:num_samples,trainingRows1)
+training2 <- training_data[trainingRows2, ]
+#preview
+head(training1)
+head(training2)
+
+#flip result for 50% of the data
+head(training2)
+training2$result <- 0
+
+#re-order and rename
+training2 <- training2[,c(1,3,2,4,5)]
+names(training2) <- c("Season", "team1_id", "team2_id", "post" ,"result")
+head(training2)
+
+#combine regular and flipped data
+training_data <- bind_rows(training1, training2)
+
+#remove temp variables
+rm(trainingRows1, trainingRows2, training1, training2)
+```
+
+### Merge in stats
+
+Read pom
+```{r}
+medianPOM <- read.csv("output/stats-pom.csv", stringsAsFactors = FALSE)
+head(medianPOM)
+```
+
+Merge in pom
+```{r}
+
+medianPOM1 <- medianPOM
+names(medianPOM1)[2] <- "team1_id"
+names(medianPOM1)[3] <- paste(sep = "_", "team1", names(medianPOM1)[3])
+
+medianPOM2 <- medianPOM
+names(medianPOM2)[2] <- "team2_id"
+names(medianPOM2)[3] <- paste(sep = "_", "team2", names(medianPOM2)[3])
+
+# Left outer joins to associate win/loss data
+training_data <- merge(x = training_data, y = medianPOM1, by = c("Season", "team1_id"), all.x = TRUE)
+training_data <- merge(x = training_data, y = medianPOM2, by = c("Season", "team2_id"), all.x = TRUE)
+
+rm(medianPOM1, medianPOM2)
+
+head(training_data)
+```
+
+Read rating
+```{r}
+netRTG <- read.csv("output/stats-rating.csv", stringsAsFactors = FALSE)
+head(netRTG)
+```
+
+Merge in Rating
+```{r}
+
+netRTG1 <- netRTG
+names(netRTG1)[2] <- "team1_id"
+names(netRTG1)[3:5] <- paste(sep = "_", "team1", names(netRTG1)[3:5])
+
+netRTG2 <- netRTG
+names(netRTG2)[2] <- "team2_id"
+names(netRTG2)[3:5] <- paste(sep = "_", "team2", names(netRTG2)[3:5])
+
+# Left outer joins to associate win/loss data
+training_data <- merge(x = training_data, y = netRTG1, by = c("Season", "team1_id"), all.x = TRUE)
+training_data <- merge(x = training_data, y = netRTG2, by = c("Season", "team2_id"), all.x = TRUE)
+
+rm(netRTG1, netRTG2)
+
+head(training_data)
+```
+
+Read tempo
+```{r}
+tempo <- read.csv("output/stats-tempo.csv", stringsAsFactors = FALSE)
+head(tempo)
+```
+
+Merge in tempo
+```{r}
+tempo1 <- tempo
+names(tempo1)[2] <- "team1_id"
+names(tempo1)[3] <- paste(sep = "_", "team1", names(tempo1)[3])
+
+tempo2 <- tempo
+names(tempo2)[2] <- "team2_id"
+names(tempo2)[3] <- paste(sep = "_", "team2", names(tempo2)[3])
+
+# Left outer joins to associate win/loss data
+training_data <- merge(x = training_data, y = tempo1, by = c("Season", "team1_id"), all.x = TRUE)
+training_data <- merge(x = training_data, y = tempo2, by = c("Season", "team2_id"), all.x = TRUE)
+
+rm(tempo1, tempo2)
+
+head(training_data)
+tail(training_data)
+```
+
+Read possession
+```{r}
+possession <- read.csv("output/stats-possession.csv", stringsAsFactors = FALSE)
+
+#select relevant columns
+possession <- possession %>% dplyr::select(-c(TotalPossessionTime, PossessionTimePerGame.S))
+head(possession)
+```
+
+Merge in possession
+```{r}
+possession1 <- possession
+names(possession1)[2] <- "team1_id"
+names(possession1)[3] <- paste(sep = "_", "team1", names(possession1)[3])
+
+possession2 <- possession
+names(possession2)[2] <- "team2_id"
+names(possession2)[3] <- paste(sep = "_", "team2", names(possession2)[3])
+
+# Left outer joins to associate win/loss data
+training_data <- merge(x = training_data, y = possession1, by = c("Season", "team1_id"), all.x = TRUE)
+training_data <- merge(x = training_data, y = possession2, by = c("Season", "team2_id"), all.x = TRUE)
+
+rm(possession1, possession2)
+
+head(training_data)
+```
+
+Select final columns
+
+NOTE: Possession was excluded from the final training set so that stage 2 submission would run faster (this choice was made after it was thoroughly tested)
+```{r}
+training_data <- training_data[,c(1,3,2,4:6,8:10,14,7,11:13,15)]
+head(training_data)
+```
+
+Output to file
+```{r}
+write.csv(training_data, file = "output/training-data.csv", row.names = FALSE)
+```
+

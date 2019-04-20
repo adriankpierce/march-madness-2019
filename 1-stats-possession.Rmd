@@ -1,0 +1,112 @@
+---
+title: "Stats - Possession Time Per Game (sec.)"
+---
+
+Load libraries
+```{r}
+library(dplyr)
+```
+
+Read in the data
+```{r}
+Events2010 <- read.csv("data/Events_2010.csv", header = TRUE)
+Events2011 <- read.csv("data/Events_2011.csv", header = TRUE)
+Events2012 <- read.csv("data/Events_2012.csv", header = TRUE)
+Events2013 <- read.csv("data/Events_2013.csv", header = TRUE)
+Events2014 <- read.csv("data/Events_2014.csv", header = TRUE)
+Events2015 <- read.csv("data/Events_2015.csv", header = TRUE)
+Events2016 <- read.csv("data/Events_2016.csv", header = TRUE)
+Events2017 <- read.csv("data/Events_2017.csv", header = TRUE)
+Events2018 <- read.csv("data/Events_2018.csv", header = TRUE)
+```
+
+Combine winning teams and losing teams stats
+```{r}
+#combine WTeam and LTeam stats
+seasonResultsCompiled <- bind_rows(Events2010[,c(2,4:5,8:9)],Events2011[,c(2,4:5,8:9)],Events2012[,c(2,4:5,8:9)],Events2013[,c(2,4:5,8:9)],Events2014[,c(2,4:5,8:9)],Events2015[,c(2,4:5,8:9)],Events2016[,c(2,4:5,8:9)],Events2017[,c(2,4:5,8:9)],Events2018[,c(2,4:5,8:9)])
+head(seasonResultsCompiled)
+```
+
+Create skeleton for to compute possession
+```{r}
+#find all unique values by BOTH Season and TeamID
+#this will be the skeleton of the final database we want
+seasonResultsCompiledUnique <- distinct(seasonResultsCompiled,Season, EventTeamID, .keep_all = TRUE)
+```
+
+Compute time between events
+```{r}
+seasonResultsCompiled$TimeBetweenEvents <- ave(seasonResultsCompiled$ElapsedSeconds, FUN = function(x) c(0,diff(x)))
+head(seasonResultsCompiled)
+
+seasonResultsCompiled$TimeBetweenEvents[seasonResultsCompiled$TimeBetweenEvents < 0] <- 0
+head(seasonResultsCompiled)
+
+#Create new columns
+seasonResultsCompiledUnique$TotalPossessionTime <- NA
+```
+
+Compute total possession time per team per season
+```{r}
+#loop through all the unique values
+for (i in 1:NROW(seasonResultsCompiledUnique)){
+    seasonResultsCompiledUnique[i,c(6)] <- sum(seasonResultsCompiled %>%
+      filter(Season == seasonResultsCompiledUnique[i,1], EventTeamID == seasonResultsCompiledUnique[i,5]) %>%
+      dplyr::select(-(Season:EventTeamID)), na.rm = FALSE)
+}
+```
+
+Read regular season game data
+```{r}
+WinData <- read.csv("data/RegularSeasonDetailedResults.csv", header = TRUE)
+head(WinData)
+```
+
+Calculate number of total number of games each team played per season
+```{r}
+#create required columns
+seasonResultsCompiledUnique$Wins <- NA
+seasonResultsCompiledUnique$Loses <- NA
+
+for (i in 1:NROW(seasonResultsCompiledUnique)){
+    #number of games as winning team
+    seasonResultsCompiledUnique[i,c(7)] <- NROW(WinData %>%
+      filter(Season == seasonResultsCompiledUnique[i,1], WTeamID == seasonResultsCompiledUnique[i,5]))
+    #number of games as losing team
+     seasonResultsCompiledUnique[i,c(8)] <- NROW(WinData %>%
+      filter(Season == seasonResultsCompiledUnique[i,1], LTeamID == seasonResultsCompiledUnique[i,5]))
+}
+```
+
+Compute possession time per game
+```{r}
+seasonResultsCompiledUnique <- seasonResultsCompiledUnique %>%
+  mutate(PossessionTimePerGame = TotalPossessionTime / (Wins + Loses))
+```
+
+Compute possession time per in seconds
+```{r}
+seasonResultsCompiledUnique <- seasonResultsCompiledUnique %>%
+  mutate(PossessionTimePerGameinMinutes = PossessionTimePerGame / 60)
+```
+
+Remove unused columns
+```{r}
+seasonResultsCompiledUnique$WTeamID <- NULL
+seasonResultsCompiledUnique$LTeamID <- NULL
+seasonResultsCompiledUnique$ElapsedSeconds <- NULL
+seasonResultsCompiledUnique$Wins <- NULL
+seasonResultsCompiledUnique$Loses <- NULL
+```
+
+Rename columns
+```{r}
+names(seasonResultsCompiledUnique) <- c("Season", "TeamID", "TotalPossessionTime", "PossessionTimePerGame.S","PossessionTimePerGame.M")
+```
+
+Output to file
+```{r}
+write.csv(seasonResultsCompiledUnique, file = "output/stats-possession.csv", row.names = FALSE)
+```
+
+

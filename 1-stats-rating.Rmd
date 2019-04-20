@@ -1,0 +1,118 @@
+---
+title: "Stats - Offensive Rating, Defensive Rating, Net Rating"
+---
+
+Load libraries
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+```
+
+Read in the data
+```{r}
+reg_season_stats <- read.csv("data/Prelim2019_RegularSeasonDetailedResults.csv", stringsAsFactors = FALSE)
+tourney_stats <- read.csv("data/NCAATourneyDetailedResults.csv", stringsAsFactors = FALSE)
+#preview data
+head(reg_season_stats)
+tail(reg_season_stats)
+head(tourney_stats)
+tail(tourney_stats)
+```
+
+Combine regular season and tournament
+```{r}
+#distinguish between season and tournament games (no longer needed)
+reg_season_stats$post <- 0
+tourney_stats$post <- 1
+#combine
+combined_stats <- bind_rows(reg_season_stats, tourney_stats)
+```
+
+Compute tempo per game for winning and losing teams (required for subsequent calculations)
+```{r}
+combined_stats <- combined_stats %>% mutate(Wposs = WFGA - WOR + WTO + 0.475*WFTA)
+combined_stats <- combined_stats %>% mutate(Lposs = LFGA - LOR + LTO + 0.475*LFTA)
+head(combined_stats)
+tail(combined_stats)
+```
+
+Combine winning teams and losing teams stats
+```{r}
+#duplicate data
+combined_statsCompiled <- combined_stats
+
+#change the column names so that they are identical for merging
+names(combined_statsCompiled) <- gsub(x = names(combined_statsCompiled), pattern = "WTeam", replacement = "Team")
+names(combined_statsCompiled) <- gsub(x = names(combined_statsCompiled), pattern = "LTeam", replacement = "Team")
+names(combined_statsCompiled) <- gsub(x = names(combined_statsCompiled), pattern = "W", replacement = "")
+names(combined_statsCompiled) <- gsub(x = names(combined_statsCompiled), pattern = "L", replacement = "")
+
+#combine WTeam and LTeam stats
+combined_statsCompiled <- bind_rows(combined_statsCompiled[,c(1,3:4,9:21,35,36)],combined_statsCompiled[,c(1,5:6,22:34,35,37)])
+head(combined_statsCompiled)
+```
+
+Create skeleton to compute Offensive Rating and Defensive Rating
+```{r}
+#find all unique values by BOTH Season and TeamID
+#this will be the skeleton of the final database we want
+combined_statsCompiledUnique <- distinct(combined_statsCompiled,Season, TeamID, .keep_all = TRUE)
+#select only relevant columns
+combined_statsCompiledUnique <- combined_statsCompiledUnique %>% select(Season, TeamID, Score, poss)
+
+#Computing defensive rating requires an additional step:
+
+#def rating as W team
+combined_statsCompiledUnique$OppScoreAsW <- NA
+combined_statsCompiledUnique$OppPossasW <- NA
+
+#def rating as L team
+combined_statsCompiledUnique$OppScoreAsL <- NA
+combined_statsCompiledUnique$OppPossasL <- NA
+
+#preview data
+head(combined_statsCompiledUnique)
+```
+
+Compute score and possession averages (required for Offensive Rating and Defensive Rating)
+```{r}
+for (i in 1:NROW(combined_statsCompiledUnique)){
+    #off rating
+    combined_statsCompiledUnique[i,c(3:4)] <- colSums(combined_statsCompiled %>%
+      filter(Season == combined_statsCompiledUnique[i,1], TeamID == combined_statsCompiledUnique[i,2]) %>%
+      dplyr::select(c(Score, poss)))
+    
+    #def rating as W team
+    combined_statsCompiledUnique[i,c(5:6)] <- colSums(combined_stats %>%
+      filter(Season == combined_statsCompiledUnique[i,1], WTeamID == combined_statsCompiledUnique[i,2]) %>%
+      dplyr::select(c(LScore, Lposs)))
+    
+    #def rating as L team
+    combined_statsCompiledUnique[i,c(7:8)] <- colSums(combined_stats %>%
+      filter(Season == combined_statsCompiledUnique[i,1], LTeamID == combined_statsCompiledUnique[i,2]) %>%
+      dplyr::select(c(WScore, Wposs)))
+}
+```
+
+Compute Offensive Rating, Defensive Rating, and Net Rating
+```{r}
+#Offensive rating
+combined_statsCompiledUnique <- combined_statsCompiledUnique %>% mutate(offRTG = 100* (Score / poss))
+
+#defensive rating
+combined_statsCompiledUnique <- combined_statsCompiledUnique %>% mutate(defRTG = 100 * ((OppScoreAsL + OppScoreAsW)/(OppPossasL + OppPossasW)))
+
+#net rating
+combined_statsCompiledUnique <- combined_statsCompiledUnique %>% mutate(netRTG = offRTG - defRTG)
+```
+
+Select relevant columns
+```{r}
+combined_statsCompiledUnique <- combined_statsCompiledUnique %>% select(Season, TeamID, offRTG, defRTG, netRTG)
+head(combined_statsCompiledUnique)
+```
+
+Output to file
+```{r}
+write.csv(combined_statsCompiledUnique, file="output/stats-rating.csv", row.names = FALSE)
+```
+
