@@ -14,7 +14,7 @@ See MEDIUM LINK for an article outlining their competition experience.
 
 Pre-requisites:
 ~~~~
-Download data files from KAGGLE LINK and place into /data folder
+Download data files from KAGGLE LINK and place into "march-madness-2019/data/"
 ~~~~
 
 1. Calculate all required statistics:
