@@ -59,7 +59,7 @@ Download data files from KAGGLE LINK and place into "march-madness-2019/data/"
 
 8. Create list of unique teams in the 2019 tournament
 ~~~~
-python createStage2Predictions.py
+8-unique-teams.Rmd
 ~~~~~~~~ 
 
 9. Manually label which teams are on "left side" of bracket vs "right side"
