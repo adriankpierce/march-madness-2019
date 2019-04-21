@@ -10,7 +10,7 @@ library(tidyverse)
 
 Read in data
 ```{r}
-submission <- read.csv("2019FinalSubmissionOutput.csv", stringsAsFactors = FALSE)
+submission <- read.csv("output/2019FinalSubmissionOutput.csv", stringsAsFactors = FALSE)
 teams <- read.csv("data/Teams.csv")
 head(submission)
 head(teams)

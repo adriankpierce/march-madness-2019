@@ -14,7 +14,6 @@ submissionA <- read.csv("output/2019FinalSubmissionOutput.csv", stringsAsFactors
 #submissionB <- read.csv("output/2019FinalSubmissionOutput.csv", stringsAsFactors = FALSE)
 LR <- read.csv("output/unique-teams-LR.csv", stringsAsFactors = FALSE)
 head(submissionA)
-head(submissionB)
 head(LR)
 ```
 

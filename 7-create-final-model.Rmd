@@ -10,8 +10,8 @@ library(tidyverse)
 
 Read in data
 ```{r}
-training_data <- read.csv("training-data.csv", stringsAsFactors = FALSE)
-submission_data <- read.csv("submission-data.csv", stringsAsFactors = FALSE)
+training_data <- read.csv("output/training-data.csv", stringsAsFactors = FALSE)
+submission_data <- read.csv("output/submission-data.csv", stringsAsFactors = FALSE)
 #preview data
 head(training_data)
 head(submission_data)
@@ -108,7 +108,7 @@ submissionTemplate$Pred <- predictions
 head(submissionTemplate)
 
 #write the output
-write.csv(submissionTemplate, file = "2019FinalSubmissionOutput.csv", row.names = FALSE)
+write.csv(submissionTemplate, file = "output/2019FinalSubmissionOutput.csv", row.names = FALSE)
 ```
 
 

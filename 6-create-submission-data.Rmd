@@ -64,7 +64,7 @@ head(submission)
 Output to file
 ```{r}
 #write
-write.csv(submission, file = "output/submission-merge.csv", row.names = FALSE)
+write.csv(submission, file = "output/submission-data.csv", row.names = FALSE)
 ```
 
 
