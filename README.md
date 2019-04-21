@@ -1,4 +1,4 @@
-# March Madness 2019
+# Machine Learning for March Madness 2019
 Adrian Pierce and Lotan Weininger's submission for the Google Cloud & NCAA® Machine Learning Competition 2019 (https://www.kaggle.com/c/mens-machine-learning-competition-2019). This model placed 79th out of 868 teams (top 10%/Kaggle Bronze Medal). 
 
 See MEDIUM LINK for an article outlining the details of this submission and competition experience.
