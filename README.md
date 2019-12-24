@@ -2,6 +2,7 @@
 Adrian Pierce and Lotan Weininger's submission for the Google Cloud & NCAA® Machine Learning Competition 2019 (https://www.kaggle.com/c/mens-machine-learning-competition-2019). This model placed 79th out of 868 teams (top 10%/Kaggle Bronze Medal).
 
 Adrian Pierce Kaggle: https://www.kaggle.com/adriankt96
+
 Lotan Weininger Kaggle: https://www.kaggle.com/losincos
 
 See https://medium.com/@lotanweininger/march-madness-machine-learning-2dbacc948874 for an article outlining the details of this submission and competition experience.
