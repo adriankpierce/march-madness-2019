@@ -1,5 +1,8 @@
 # Machine Learning for March Madness 2019
-Adrian Pierce and Lotan Weininger's submission for the Google Cloud & NCAA® Machine Learning Competition 2019 (https://www.kaggle.com/c/mens-machine-learning-competition-2019). This model placed 79th out of 868 teams (top 10%/Kaggle Bronze Medal). 
+Adrian Pierce and Lotan Weininger's submission for the Google Cloud & NCAA® Machine Learning Competition 2019 (https://www.kaggle.com/c/mens-machine-learning-competition-2019). This model placed 79th out of 868 teams (top 10%/Kaggle Bronze Medal).
+
+Adrian Pierce Kaggle: https://www.kaggle.com/adriankt96
+Lotan Weininger Kaggle: https://www.kaggle.com/losincos
 
 See https://medium.com/@lotanweininger/march-madness-machine-learning-2dbacc948874 for an article outlining the details of this submission and competition experience.
 
@@ -30,56 +33,56 @@ Download data files from https://www.kaggle.com/c/mens-machine-learning-competit
 2. Conduct exploratory data analysis:
 ~~~~
 2-eda.rmd
-~~~~~~~~ 
+~~~~~~~~
 
 3. Using the variables that best distinguish performant teams and non-performant teams, create training data:
 ~~~~
 3-create-training-data.rmd
-~~~~~~~~ 
+~~~~~~~~
 
 4. Test different combinations of the final variables with the logistic regression model (simulated competition results):
 ~~~~
 4-model-selection.rmd
-~~~~~~~~ 
+~~~~~~~~
 
 5. Using the model with the lowest error, find the optimal "clamp" value:
 ~~~~
 5-clamp-selection.rmd
-~~~~~~~~ 
+~~~~~~~~
 
 6. Merge training data into the correct submission format:
 ~~~~
 6-create-submission-data.RMD
-~~~~~~~~ 
+~~~~~~~~
 
 7. Create final model and write predictions:
 ~~~~
 7-create-final-model.Rmd
-~~~~~~~~ 
+~~~~~~~~
 
 ##### To guarentee 1 correct prediction, a few additional steps must be taken
 
 8. Create list of unique teams in the 2019 tournament:
 ~~~~
 8-unique-teams.Rmd
-~~~~~~~~ 
+~~~~~~~~
 
 9. Manually label which teams are on "left side" of bracket vs "right side":
 ~~~~
 see "output/unique-teams-LR.csv" for the 2019 file
-~~~~~~~~ 
+~~~~~~~~
 
-10. Modify final submission files: 
+10. Modify final submission files:
 ~~~~
 9-submission-LR.rmd
-~~~~~~~~ 
+~~~~~~~~
 
 ##### Optional
 
 11. Merge team names to final prediction file for readability:
 ~~~~
 10-predictions-named.Rmd
-~~~~~~~~ 
+~~~~~~~~
 
 ### Predictor Details
 
