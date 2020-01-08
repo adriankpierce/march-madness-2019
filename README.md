@@ -1,20 +1,11 @@
 # Machine Learning for March Madness 2019
-Adrian Pierce and Lotan Weininger's submission for the Google Cloud & NCAA® Machine Learning Competition 2019 (https://www.kaggle.com/c/mens-machine-learning-competition-2019). This model placed 79th out of 868 teams (top 10%/Kaggle Bronze Medal).
+Adrian Pierce and Lotan Weininger's submission for the <a href='https://www.kaggle.com/c/mens-machine-learning-competition-2019' target="_blank">Google Cloud & NCAA® Machine Learning Competition 2019</a>. This model placed 79th out of 868 teams (top 10%/Kaggle Bronze Medal).
 
-Adrian Pierce Kaggle: https://www.kaggle.com/adriankt96
+## Read The Article
 
-Lotan Weininger Kaggle: https://www.kaggle.com/losincos
+Please see https://medium.com/@lotanweininger/march-madness-machine-learning-2dbacc948874 for a comprehensive write-up/article outlining the details of this submission and the competition experience.
 
-See https://medium.com/@lotanweininger/march-madness-machine-learning-2dbacc948874 for an article outlining the details of this submission and competition experience.
-
-### Required Dependencies
-* Tidyverse
-* SciViews
-* MLmetrics
-* Raster
-* Stringr
-
-### Execution Instructions
+## Execution Instructions
 
 Pre-requisites:
 ~~~~
@@ -85,7 +76,7 @@ see "output/unique-teams-LR.csv" for the 2019 file
 10-predictions-named.Rmd
 ~~~~~~~~
 
-### Predictor Details
+## Predictor Details
 
 | ﻿Variable | Description                     | Team  |
 |----------|---------------------------------|-------|
@@ -104,7 +95,7 @@ see "output/unique-teams-LR.csv" for the 2019 file
 | X13      | Adjusted Pomeroy Ranking        | Team1 |
 | X14      | Adjusted Pomeroy Ranking        | Team2 |
 
-### Model Selection
+## Model Selection
 
 | ﻿Model | Variable Composition                                    | Error   |
 |-------|---------------------------------------------------------|---------|
